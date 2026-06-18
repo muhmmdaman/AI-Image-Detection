@@ -150,17 +150,46 @@ def generate_heatmap(model, input_tensor, original_image, save_path):
 @app.route("/predict", methods=["POST"])
 def predict():
     global model, CLASS_NAMES
+
     try:
+        print("\n========== NEW PREDICTION REQUEST ==========")
+
+        # STEP 1
+        print("STEP 1: Checking uploaded file")
+
         if "file" not in request.files:
+            print("ERROR: No file uploaded")
             return jsonify({"error": "No file uploaded"}), 400
 
         file = request.files["file"]
+        print(f"Uploaded file: {file.filename}")
+
+        # STEP 2
+        print("STEP 2: Loading image")
+
         img = Image.open(io.BytesIO(file.read())).convert("RGB")
+
+        print(f"Image size: {img.size}")
+
+        # STEP 3
+        print("STEP 3: Transforming image")
+
         input_tensor = transform(img).unsqueeze(0).to(DEVICE)
+
+        print(f"Tensor shape: {input_tensor.shape}")
+
+        # STEP 4
+        print("STEP 4: Running model inference")
 
         with torch.no_grad():
             output = model(input_tensor)
+
         prob = torch.sigmoid(output).squeeze().item()
+
+        print(f"Raw probability: {prob}")
+
+        # STEP 5
+        print("STEP 5: Processing prediction")
 
         if not CLASS_NAMES or len(CLASS_NAMES) < 2:
             CLASS_NAMES = ["real", "ai_generated"]
@@ -169,25 +198,49 @@ def predict():
         label = CLASS_NAMES[label_idx]
         confidence = prob if label_idx == 1 else (1 - prob)
 
+        print(f"Label: {label}")
+        print(f"Confidence: {confidence}")
+
+        # STEP 6
+        print("STEP 6: Creating heatmap path")
+
         heatmap_path = os.path.abspath(
             os.path.join(app.static_folder, "assets", "heatmap.png")
         )
-        generate_heatmap(model, input_tensor, img, heatmap_path)
 
-        print(f"✅ Prediction: {label} ({confidence*100:.2f}%)")
-        return jsonify(
-            {
-                "label": label,
-                "confidence": round(confidence, 4),
-                "heatmap": "/assets/heatmap.png",
-            }
+        print(f"Heatmap path: {heatmap_path}")
+
+        # STEP 7
+        print("STEP 7: Generating heatmap")
+
+        generate_heatmap(
+            model=model,
+            input_tensor=input_tensor,
+            original_image=img,
+            save_path=heatmap_path,
         )
+
+        print("STEP 8: Heatmap generated successfully")
+
+        response = {
+            "label": label,
+            "confidence": round(confidence, 4),
+            "heatmap": "/assets/heatmap.png",
+        }
+
+        print("STEP 9: Returning response")
+        print(response)
+
+        return jsonify(response)
 
     except Exception as e:
         import traceback
 
+        print("\n========== PREDICTION FAILED ==========")
+        print("ERROR:", str(e))
         traceback.print_exc()
-        print("Prediction error:", str(e))
+        print("=======================================\n")
+
         return jsonify({"error": str(e)}), 500
 
 
