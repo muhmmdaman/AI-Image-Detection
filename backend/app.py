@@ -5,7 +5,15 @@ import torch
 import torch.nn as nn
 import numpy as np
 import cv2
-from flask import Flask, request, jsonify, send_from_directory, session, redirect, url_for
+from flask import (
+    Flask,
+    request,
+    jsonify,
+    send_from_directory,
+    session,
+    redirect,
+    url_for,
+)
 from torchvision import models, transforms
 from PIL import Image
 import shutil
@@ -13,9 +21,12 @@ import shutil
 app = Flask(__name__, static_folder="../frontend", static_url_path="/")
 app.secret_key = "super_secret_key_123"
 USER_FILE = "users.json"
-MODEL_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "../real_vs_ai_resnet18_final.pth"))
+MODEL_PATH = os.path.abspath(
+    os.path.join(os.path.dirname(__file__), "../real_vs_ai_resnet18_final.pth")
+)
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def load_users():
     if not os.path.exists(USER_FILE):
@@ -29,6 +40,7 @@ def load_users():
             json.dump({}, f)
         return {}
 
+
 def save_users(data):
     with open(USER_FILE, "w") as f:
         json.dump(data, f, indent=2)
@@ -39,10 +51,7 @@ def load_model():
     model = models.resnet18(weights=None)
     in_features = model.fc.in_features
     model.fc = nn.Sequential(
-        nn.Linear(in_features, 128),
-        nn.ReLU(),
-        nn.Dropout(0.4),
-        nn.Linear(128, 1)
+        nn.Linear(in_features, 128), nn.ReLU(), nn.Dropout(0.4), nn.Linear(128, 1)
     )
 
     checkpoint = torch.load(MODEL_PATH, map_location=DEVICE)
@@ -54,14 +63,18 @@ def load_model():
     print(f"✅ Model loaded with classes: {class_names}")
     return model, class_names
 
+
 model, CLASS_NAMES = load_model()
 
-transform = transforms.Compose([
-    transforms.Resize((224, 224)),
-    transforms.ToTensor(),
-    transforms.Normalize(mean=[0.485, 0.456, 0.406],
-                         std=[0.229, 0.224, 0.225])
-])
+transform = transforms.Compose(
+    [
+        transforms.Resize((224, 224)),
+        transforms.ToTensor(),
+        transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+    ]
+)
+
+
 @app.route("/login", methods=["GET", "POST"])
 def login():
     if request.method == "GET":
@@ -75,6 +88,7 @@ def login():
         session["user"] = email
         return redirect(url_for("index"))
     return "<h3>❌ Invalid credentials. <a href='/login'>Try again</a></h3>"
+
 
 @app.route("/register", methods=["GET", "POST"])
 def register():
@@ -92,6 +106,7 @@ def register():
     save_users(users)
     return redirect(url_for("login"))
 
+
 @app.route("/logout")
 def logout():
     session.pop("user", None)
@@ -105,6 +120,7 @@ def generate_heatmap(model, input_tensor, original_image, save_path):
 
     def forward_hook(module, input, output):
         activations.append(output.detach())
+
     def backward_hook(module, grad_input, grad_output):
         gradients.append(grad_output[0].detach())
 
@@ -153,19 +169,25 @@ def predict():
         label = CLASS_NAMES[label_idx]
         confidence = prob if label_idx == 1 else (1 - prob)
 
-        heatmap_path = os.path.abspath(os.path.join(app.static_folder, "assets", "heatmap.png"))
+        heatmap_path = os.path.abspath(
+            os.path.join(app.static_folder, "assets", "heatmap.png")
+        )
         generate_heatmap(model, input_tensor, img, heatmap_path)
 
         print(f"✅ Prediction: {label} ({confidence*100:.2f}%)")
-        return jsonify({
-            "label": label,
-            "confidence": round(confidence, 4),
-            "heatmap": "/assets/heatmap.png"
-        })
+        return jsonify(
+            {
+                "label": label,
+                "confidence": round(confidence, 4),
+                "heatmap": "/assets/heatmap.png",
+            }
+        )
 
     except Exception as e:
-        print("Prediction error:", e)
-        import traceback; traceback.print_exc()
+        import traceback
+
+        traceback.print_exc()
+        print("Prediction error:", str(e))
         return jsonify({"error": str(e)}), 500
 
 
@@ -183,8 +205,10 @@ def feedback():
         img = Image.open(io.BytesIO(file.read())).convert("RGB")
         x = transform(img).unsqueeze(0).to(DEVICE)
 
-        for param in model.parameters(): param.requires_grad = False
-        for param in model.fc.parameters(): param.requires_grad = True
+        for param in model.parameters():
+            param.requires_grad = False
+        for param in model.fc.parameters():
+            param.requires_grad = True
 
         optimizer = torch.optim.AdamW(model.fc.parameters(), lr=1e-5, weight_decay=1e-6)
         criterion = nn.BCEWithLogitsLoss()
@@ -198,10 +222,9 @@ def feedback():
         optimizer.step()
         model.eval()
 
-        torch.save({
-            "model_state": model.state_dict(),
-            "class_names": CLASS_NAMES
-        }, MODEL_PATH)
+        torch.save(
+            {"model_state": model.state_dict(), "class_names": CLASS_NAMES}, MODEL_PATH
+        )
 
         model, CLASS_NAMES = load_model()
         model.to(DEVICE)
@@ -210,7 +233,9 @@ def feedback():
         return jsonify({"message": f"Model retrained successfully ({label_str})"})
     except Exception as e:
         print("Feedback error:", e)
-        import traceback; traceback.print_exc()
+        import traceback
+
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 
@@ -223,5 +248,4 @@ def index():
 
 if __name__ == "__main__":
     print("🚀 Running AI Image Detector on http://127.0.0.1:5000/")
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=5000, debug=True)
