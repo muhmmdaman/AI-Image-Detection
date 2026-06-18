@@ -19,7 +19,9 @@ from PIL import Image
 import shutil
 
 app = Flask(__name__, static_folder="../frontend", static_url_path="/")
-app.secret_key = "super_secret_key_123"
+import os
+
+app.secret_key = os.environ.get("SECRET_KEY", "super_secret_key_123")
 USER_FILE = "users.json"
 MODEL_PATH = os.path.abspath(
     os.path.join(os.path.dirname(__file__), "../real_vs_ai_resnet18_final.pth")
