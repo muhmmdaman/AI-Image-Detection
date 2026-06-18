@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="utf-8" />
+  <meta content="width=device-width,initial-scale=1" name="viewport" />
+  <title>
+    AI Image Detector • Neon Core
+  </title>
+  <link href="styles.css" rel="stylesheet" />
+</head>
+
+<body>
+  
+  <div id="universe">
+  </div>
+  
+  <header class="topbar">
+    <div class="logo">
+      <div class="logo-bubble">
+        💬
+      </div>
+      <div class="logo-text">
+        AI Image Detector
+      </div>
+    </div>
+    <nav class="top-actions">
+
+      <a class="btn small ghost" href="/logout">Logout</a>
+
+
+    </nav>
+  </header>
+  <main class="shell">
+    <section class="panel left-panel">
+      <div class="glass upload-glass">
+        <div class="upload-header">
+          <h3>
+            Upload • Analyze
+          </h3>
+          <p class="muted">
+            Drag / drop or click to select an image
+          </p>
+        </div>
+        <div class="upload-box" id="upload-box">
+          <input accept="image/*" hidden="" id="file-input" type="file" />
+          <div class="upload-label" id="upload-label">
+            <div class="camera">
+              📷
+            </div>
+            <p class="upload-prompt">
+              Click or drag an image here
+            </p>
+            <p class="support">
+              PNG, JPG, WebP — any
+            </p>
+          </div>
+          <img alt="preview" class="preview" id="preview" style="display:none" />
+          <div class="scan-overlay" id="scan-overlay">
+            <div class="scan-line">
+            </div>
+          </div>
+          <div class="preview-zoom" id="preview-zoom" style="display:none">
+            <img alt="zoom" id="preview-zoom-img" />
+            <button class="icon-btn" id="zoom-close">
+              ✕
+            </button>
+          </div>
+        </div>
+        <div class="controls">
+          <button class="btn primary" disabled="" id="predict-btn">
+            Analyze Image
+          </button>
+          <button class="btn ghost" id="reset-btn" style="display:none">
+            Try Another
+          </button>
+        </div>
+        <div class="result" id="result" style="display:none">
+          <div class="result-badge">
+            <div class="result-text" id="result-label">
+
+              PREDICTION
+            </div>
+            <div class="result-sub" id="result-confidence">
+              Confidence
+            </div>
+            <div id="feedback" class="feedback-box" style="display:none;">
+              <p>Was this prediction correct?</p>
+              <button id="thumbs-up" class="feedback-btn">👍</button>
+              <button id="thumbs-down" class="feedback-btn">👎</button>
+            </div>
+
+          </div>
+          <div class="result-graph">
+            <div class="bar real">
+            </div>
+            <div class="bar ai">
+            </div>
+          </div>
+          <div id="feedback" class="feedback-box" style="display:none;">
+            <p>Was this prediction correct?</p>
+            <button id="thumbs-up" class="feedback-btn">👍</button>
+            <button id="thumbs-down" class="feedback-btn">👎</button>
+          </div>
+
+        </div>
+      </div>
+    </section>
+    <section class="panel right-panel">
+      <div class="glass info-glass">
+        <div class="ai-core">
+          <h3>
+            AI Core Activity
+          </h3>
+          <div class="meter">
+            <div class="meter-fill" id="meter-fill">
+            </div>
+          </div>
+          <p id="meter-state">
+            Ready
+          </p>
+        </div>
+        <div class="cards">
+          <div class="card">
+            <h4>
+              Model
+            </h4>
+            <p>
+              ResNet18
+            </p>
+          </div>
+          <div class="card">
+            <h4>
+              Accuracy
+            </h4>
+            <p>
+              97.4%
+            </p>
+          </div>
+          <div class="card">
+            <h4>
+              Framework
+            </h4>
+            <p>
+              PyTorch + Flask
+            </p>
+          </div>
+        </div>
+        <div class="logbox">
+          <div class="log-title">
+            Activity Log
+          </div>
+          <div class="log-entries" id="logs">
+            <div class="log">
+              System ready — awaiting input.
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+  <section class="insights">
+    <div class="glass insights-glass">
+      <h2>
+        Detection Insights
+      </h2>
+      <p>
+        Visual breakdown of model interpretation — pixel patterns and confidence maps.
+      </p>
+      <div class="insight-grid">
+        <div class="insight-item heatmap">
+          <div class="heatmap-title">
+            <h4>
+              AI Feature Map
+            </h4>
+            <div class="info-wrapper">
+              <span class="info-icon" id="heatmap-info">
+                ❔
+              </span>
+              <div class="tooltip" id="heatmap-tooltip">
+                <strong>
+                  Heatmap Guide:
+                </strong>
+                <br />
+                🔴 / 🟠 → Strong influence (AI-like features)
+                <br />
+                🟢 → Moderate influence
+                <br />
+                🔵 → Low influence
+                <br />
+                <br />
+                Areas with warmer colors are where the model focused most to decide if the image is AI or Real.
+              </div>
+            </div>
+          </div>
+          <div class="heatmap-container">
+            <img alt="Heatmap" class="heatmap-img" id="ai-heatmap" src="assets/heatmap.png" />
+            <div class="legend">
+              <span class="low">
+                Low
+              </span>
+              <div class="color-scale">
+              </div>
+              <span class="high">
+                High
+              </span>
+            </div>
+          </div>
+        </div>
+        <div class="insight-item chart">
+          <h4>
+            Confidence Distribution
+          </h4>
+          <canvas id="confidenceChart">
+          </canvas>
+          <div class="chart-summary" id="chart-summary">
+            <div class="summary-bar">
+              <div class="bar-fill ai-fill">
+              </div>
+              <div class="bar-fill real-fill">
+              </div>
+            </div>
+            <div class="summary-labels">
+              <span class="ai-val">
+                AI: --%
+              </span>
+              <span class="real-val">
+                Real: --%
+              </span>
+            </div>
+          </div>
+          <div class="chart-footer">
+            Model confidence distribution for current prediction.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <section class="tech-section">
+    <h2>
+      How It Works
+    </h2>
+    <div class="tech-steps">
+      <div class="tech-card">
+        <div class="icon">
+          🧠
+        </div>
+        <h4>
+          1. Input Layer
+        </h4>
+        <p>
+          Uploads the image into the model pipeline.
+        </p>
+      </div>
+      <div class="tech-card">
+        <div class="icon">
+          ⚙️
+        </div>
+        <h4>
+          2. Feature Extraction
+        </h4>
+        <p>
+          ResNet filters extract texture and light patterns.
+        </p>
+      </div>
+      <div class="tech-card">
+        <div class="icon">
+          🔍
+        </div>
+        <h4>
+          3. Classification
+        </h4>
+        <p>
+          The network computes probabilities for AI vs. Real.
+        </p>
+      </div>
+      <div class="tech-card">
+        <div class="icon">
+          📊
+        </div>
+        <h4>
+          4. Output
+        </h4>
+        <p>
+          Confidence results displayed visually on screen.
+        </p>
+      </div>
+    </div>
+  </section>
+  <section class="stats-section">
+    <h2>
+      Global AI Detection Stats
+    </h2>
+    <div class="stats-grid">
+      <div class="stat-block">
+        <h3>
+          Scans
+        </h3>
+        <p>
+          2,341,984
+        </p>
+      </div>
+      <div class="stat-block">
+        <h3>
+          AI Detected
+        </h3>
+        <p>
+          71.6%
+        </p>
+      </div>
+      <div class="stat-block">
+        <h3>
+          Confidence
+        </h3>
+        <p>
+          88.2%
+        </p>
+      </div>
+    </div>
+  </section>
+  <section class="performance-section">
+    <div class="glass performance-glass">
+      <h2>
+        Model Performance History
+      </h2>
+      <p>
+        Training and validation accuracy/loss over epochs.
+      </p>
+      <div class="performance-charts">
+        <div class="chart-item">
+          <h4>
+            Accuracy
+          </h4>
+          <canvas id="accuracyChart">
+          </canvas>
+          <div class="chart-footer">
+            Validation (orange) vs. Training (blue) Accuracy
+          </div>
+        </div>
+        <div class="chart-item">
+          <h4>
+            Loss
+          </h4>
+          <canvas id="lossChart">
+          </canvas>
+          <div class="chart-footer">
+            Validation (orange) vs. Training (blue) Loss
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <footer class="footer">
+    
+    
+    
+    Made by 
+    <span id="year">
+    </span>
+    <strong>
+      Aman.
+    </strong>
+  </footer>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js">
+  </script>
+  <script src="script.js">
+  </script>
+  <script>
+    if (!document.querySelector('.site-aurora')) {
+      const node = document.createElement('div');
+      node.className = 'site-aurora';
+      document.body.appendChild(node);
+      requestAnimationFrame(() => node.classList.add('animate'));
+    }
+    (function () {
+      const els = document.querySelectorAll('.reveal');
+      if (!els.length) return;
+      if ('IntersectionObserver' in window) {
+        const obs = new IntersectionObserver((entries, o) => {
+          entries.forEach(e => {
+            if (e.isIntersecting) {
+              e.target.classList.add('inview');
+              o.unobserve(e.target);
+            }
+          });
+        }, { threshold: 0.15 });
+        els.forEach(el => obs.observe(el));
+      } else {
+        els.forEach(el => el.classList.add('inview'));
+      }
+    })();
+  </script>
+
+</body>
+
+</html>
